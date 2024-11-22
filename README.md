@@ -71,7 +71,7 @@ the public domain within the United States, and copyright and related rights in
 the work worldwide are waived through the [CC0 1.0 Universal public domain dedication](https://creativecommons.org/publicdomain/zero/1.0/).
 All contributions to this repository will be released under the CC0 dedication. By
 submitting a pull request you are agreeing to comply with this waiver of
-copyright interest. 
+copyright interest.
 
 ### License Standard Notice
 
@@ -100,4 +100,4 @@ CDC including this GitHub page may be subject to applicable federal law, includi
 
 This repository is not a source of government records, but is a copy to increase
 collaboration and collaborative potential. All government records will be
-published through the [CDC web site](http://www.cdc.gov). 
+published through the [CDC web site](http://www.cdc.gov).
