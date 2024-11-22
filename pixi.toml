@@ -1,0 +1,14 @@
+[project]
+authors = ["Lee Katz - Aspen <gzu2@cdc.gov>"]
+channels = ["conda-forge", "bioconda"]
+description = "Add a short description here"
+name = "checkSraIfUploaded"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+sra-tools = ">=3.1.1,<4"
+entrez-direct = ">=22.4,<23"
+fasten = ">=0.8.3,<0.9"
