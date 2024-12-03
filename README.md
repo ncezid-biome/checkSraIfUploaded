@@ -37,7 +37,7 @@ Automate it
 # Loop through all R1 files
 dir=testdata
 for R1 in $dir/*_R1_*.fastq.gz $dir/*_1.fastq.gz; do
-    R2=${R1/_1/_2}
+    R2=${R1/_1.fastq.gz/_2.fastq.gz}
     R2=${R2/_R1_/_R2_}
 
     echo "Looking at $R1 and $R2 ..."
@@ -72,11 +72,18 @@ mashThreshold=0.95
 k=32
 stackSize=10000
 parentTempdir="fasterq-dump"
-(
-zcat spots_found_on_ncbi.txt.gz | while read SRS localR1 localR2; do 
+zcat spots_found_on_ncbi.txt.gz | (
+while read SRS localR1 localR2; do 
+  echo "$SRS $localR1 $localR2"; continue;
   #SRS=SRS645554 # found in column 1 of spots_found_on_ncbi.txt
   #localR1=/mnt/CalculationEngineReads.test/LMO/2014L-6329-M947-14-050-Jul11_S4_L001_R1_001.fastq.gz
   #localR2=/mnt/CalculationEngineReads.test/LMO/2014L-6329-M947-14-050-Jul11_S4_L001_R2_001.fastq.gz
+  sample=$(basename $localR1 .fastq.gz)
+  if [ ! $(grep "$sample" not_on_ncbi.txt >/dev/null 2>/dev/null) ]; then
+    echo "SKIP: already found $sample in not_on_ncbi.txt";
+    continue;
+  fi
+  echo "NOTE: testing $sample"
   SRR=$(esearch -db sra -query $SRS | efetch -format xml | xtract -pattern EXPERIMENT_PACKAGE -element RUN@accession)
   tempdir="$parentTempdir/$SRR.fasterq"
   mkdir -pv $tempdir
@@ -87,16 +94,15 @@ zcat spots_found_on_ncbi.txt.gz | while read SRS localR1 localR2; do
   distR2=$(mash dist -s $stackSize -k $k $ncbiR2 $localR2 | cut -f 3)
 
   if (( $(echo "$distR1 > $mashThreshold" | bc -l) )) && (( $(echo "$distR2 > $mashThreshold" | bc -l) )); then
-    echo $SRS meets thresholds
+    echo "FOUND ON NCBI: $SRR $sample"
     echo -e "$SRR\t$localR1\t$ncbiR1" >> $found_on_ncbi.txt
     echo -e "$SRR\t$localR2\t$ncbiR2" >> $found_on_ncbi.txt
   else
-    echo $SRS not on ncbi
+    echo "NOT FOUND ON NCBI: $SRR $sample"
     echo -e "$localR1\t$localR2" >> not_on_ncbi.txt
   fi
 
   rm -rvf $tempdir
-
 done
 )
 ```

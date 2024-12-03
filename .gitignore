@@ -1,0 +1,14 @@
+# pixi environments
+.pixi
+pixi.lock
+*.egg-info
+
+Listeria.SR[SR].csv*
+not_on_ncbi.txt*
+bases.csv.gz
+spots_found_on_ncbi.txt.gz*
+*.log
+spots.csv.gz
+SR[SR]_run.txt
+tmp*
+compare
