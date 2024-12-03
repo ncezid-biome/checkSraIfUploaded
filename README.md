@@ -44,21 +44,61 @@ for R1 in $dir/*_R1_*.fastq.gz $dir/*_1.fastq.gz; do
 
     # get the number of spots in the local fastq 
     numReads=$(zcat $R1 $R2 | fasten_metrics | tail -n 1 | cut -f 2)
-    SRS=$(zgrep $(($numReads/2)) spots.csv.gz | cut -f2 -d,)
+    SRS=$(zgrep $(($numReads/2)) spots.csv.gz | cut -f2 -d, | sort -n | uniq)
 
     # Even though only one SRS is expected, more could be found and so loop through them
     # If the SRS is found, then mark for later verification
-    for srs_acc in $SRS; do
-        echo $R1 $R2 >> spots_found_on_ncbi.txt
-    done
+    (
+        for srs_acc in $SRS; do
+            echo -e "$srs_acc\t$R1\t$R2"
+        done
+    ) | gzip -9c >> spots_found_on_ncbi.txt.gz
     # If the SRS is not found, then it is at least not found in NCBI Pathogens and so
     # mark it for safe keeping
-    if [ ! "$SRS" ]; then
-        echo $R1 $R2 >> not_on_ncbi.txt
-    fi
+    (
+        if [ ! "$SRS" ]; then
+            echo $R1 $R2
+        fi
+    ) >> not_on_ncbi.txt
 done
 
 # TODO download fastq from NCBI and compare against local fastq file
+# To recap: not_on_ncbi.txt represents reads not already on NCBI for sure, but
+# spots_found_on_ncbi.txt represents reads that _might_ be on NCBI.
+# We need to verify the reads from spots_found_on_ncbi.txt and either:
+#   * (not verified) add these reads to not_on_ncbi.txt 
+#   * or, (verified) add these reads to a new file found_on_ncbi.txt
+mashThreshold=0.95
+k=32
+stackSize=10000
+parentTempdir="fasterq-dump"
+(
+zcat spots_found_on_ncbi.txt.gz | while read SRS localR1 localR2; do 
+  #SRS=SRS645554 # found in column 1 of spots_found_on_ncbi.txt
+  #localR1=/mnt/CalculationEngineReads.test/LMO/2014L-6329-M947-14-050-Jul11_S4_L001_R1_001.fastq.gz
+  #localR2=/mnt/CalculationEngineReads.test/LMO/2014L-6329-M947-14-050-Jul11_S4_L001_R2_001.fastq.gz
+  SRR=$(esearch -db sra -query $SRS | efetch -format xml | xtract -pattern EXPERIMENT_PACKAGE -element RUN@accession)
+  tempdir="$parentTempdir/$SRR.fasterq"
+  mkdir -pv $tempdir
+  fasterq-dump $SRR --threads 12 --outdir $tempdir --split-files --skip-technical
+  ncbiR1=$tempdir/${SRR}_1.fastq
+  ncbiR2=${ncbiR1/_1/_2}
+  distR1=$(mash dist -s $stackSize -k $k $ncbiR1 $localR1 | cut -f 3)
+  distR2=$(mash dist -s $stackSize -k $k $ncbiR2 $localR2 | cut -f 3)
+
+  if (( $(echo "$distR1 > $mashThreshold" | bc -l) )) && (( $(echo "$distR2 > $mashThreshold" | bc -l) )); then
+    echo $SRS meets thresholds
+    echo -e "$SRR\t$localR1\t$ncbiR1" >> $found_on_ncbi.txt
+    echo -e "$SRR\t$localR2\t$ncbiR2" >> $found_on_ncbi.txt
+  else
+    echo $SRS not on ncbi
+    echo -e "$localR1\t$localR2" >> not_on_ncbi.txt
+  fi
+
+  rm -rvf $tempdir
+
+done
+)
 ```
 
 ## Notices
