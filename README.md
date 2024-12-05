@@ -62,6 +62,13 @@ for R1 in $dir/*_R1_*.fastq.gz $dir/*_1.fastq.gz; do
     ) >> not_on_ncbi.txt
 done
 
+# Some results seem to be duplicated a ton and so let's mostly ignore them
+zcat spots_found_on_ncbi.txt.gz | perl -lane '
+  next if($F[1]++ > 10); 
+  print;
+' > spots_found_on_ncbi.txt && \
+  gzip -fv9 spots_found_on_ncbi.txt
+
 # TODO download fastq from NCBI and compare against local fastq file
 # To recap: not_on_ncbi.txt represents reads not already on NCBI for sure, but
 # spots_found_on_ncbi.txt represents reads that _might_ be on NCBI.
@@ -72,39 +79,18 @@ mashThreshold=0.95
 k=32
 stackSize=10000
 parentTempdir="fasterq-dump"
-zcat spots_found_on_ncbi.txt.gz | (
-while read SRS localR1 localR2; do 
-  echo "$SRS $localR1 $localR2"; continue;
-  #SRS=SRS645554 # found in column 1 of spots_found_on_ncbi.txt
-  #localR1=/mnt/CalculationEngineReads.test/LMO/2014L-6329-M947-14-050-Jul11_S4_L001_R1_001.fastq.gz
-  #localR2=/mnt/CalculationEngineReads.test/LMO/2014L-6329-M947-14-050-Jul11_S4_L001_R2_001.fastq.gz
-  sample=$(basename $localR1 .fastq.gz)
-  if [ ! $(grep "$sample" not_on_ncbi.txt >/dev/null 2>/dev/null) ]; then
-    echo "SKIP: already found $sample in not_on_ncbi.txt";
-    continue;
-  fi
-  echo "NOTE: testing $sample"
-  SRR=$(esearch -db sra -query $SRS | efetch -format xml | xtract -pattern EXPERIMENT_PACKAGE -element RUN@accession)
-  tempdir="$parentTempdir/$SRR.fasterq"
-  mkdir -pv $tempdir
-  fasterq-dump $SRR --threads 12 --outdir $tempdir --split-files --skip-technical
-  ncbiR1=$tempdir/${SRR}_1.fastq
-  ncbiR2=${ncbiR1/_1/_2}
-  distR1=$(mash dist -s $stackSize -k $k $ncbiR1 $localR1 | cut -f 3)
-  distR2=$(mash dist -s $stackSize -k $k $ncbiR2 $localR2 | cut -f 3)
-
-  if (( $(echo "$distR1 > $mashThreshold" | bc -l) )) && (( $(echo "$distR2 > $mashThreshold" | bc -l) )); then
-    echo "FOUND ON NCBI: $SRR $sample"
-    echo -e "$SRR\t$localR1\t$ncbiR1" >> $found_on_ncbi.txt
-    echo -e "$SRR\t$localR2\t$ncbiR2" >> $found_on_ncbi.txt
-  else
-    echo "NOT FOUND ON NCBI: $SRR $sample"
-    echo -e "$localR1\t$localR2" >> not_on_ncbi.txt
+zcat spots_found_on_ncbi.txt.gz | shuf | xargs -P 4 -L 1 bash -c '
+  SRS=$0
+  localR1=$1
+  localR2=$2
+  if [[ $(stat -c%s "$localR1") -lt 1000 || $(stat -c%s "$localR2") -lt 1000 ]]; then
+    echo "Error: One or both files are smaller than 1000 bytes." >&2
+    ls -lhL $localR1 $localR2 >&2
+    exit 1
   fi
 
-  rm -rvf $tempdir
-done
-)
+  perl scripts/checkLocalVsNcbiWithMash.pl --R1 $localR1 --R2 $localR2 --SRS $SRS
+' > checkNcbiWithMash.tsv
 ```
 
 ## Notices
