@@ -8,8 +8,8 @@ I have a large number of fastq files locally and most of them have been uploaded
 # Get all metadata from the Listeria NCBI Pathogens
 cat ~/GWA/projects/SneakerNet/ncbiPathogens/data/ftp.ncbi.nlm.nih.gov/pathogen/Results/Listeria/latest_snps/Metadata/PDG000000001.3974.metadata.tsv | sort | gzip -c9 > PDG000000001.3974.metadata.tsv.gz
 # extract any SRA run ID
-zcat PDG000000001.3974.metadata.tsv | perl -lane 'while(/([DES]RR\d+)/g){print $1;}' > SRA_run.txt
-zcat PDG000000001.3974.metadata.tsv | perl -lane 'while(/([DES]RS\d+)/g){print $1;}' > SRS_run.txt
+zcat PDG000000001.3974.metadata.tsv.gz | perl -lane 'while(/([DES]RR\d+)/g){print $1;}' > SRA_run.txt
+zcat PDG000000001.3974.metadata.tsv.gz | perl -lane 'while(/([DES]RS\d+)/g){print $1;}' > SRS_run.txt
 # Get the number of spots per SRA ID
 nohup efetch -input SRA_run.txt -db SRA > Listeria.SRR.csv 2> Listeria.SRR.csv.log &
 nohup efetch -input SRS_run.txt -db SRA > Listeria.SRS.csv 2> Listeria.SRS.csv.log &
@@ -36,6 +36,8 @@ Automate it
 ```bash
 # Loop through all R1 files
 dir=testdata
+# for R1 in $(find /mnt/CalculationEngineReads.test/notForProduction/Bot -name '*_R1_*.fastq.gz' && find /mnt/CalculationEngineReads.test/notForProduction/Bot -name '*_1.fastq.gz
+')
 for R1 in $dir/*_R1_*.fastq.gz $dir/*_1.fastq.gz; do
     R2=${R1/_1.fastq.gz/_2.fastq.gz}
     R2=${R2/_R1_/_R2_}

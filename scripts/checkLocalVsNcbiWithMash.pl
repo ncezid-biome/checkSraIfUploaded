@@ -35,7 +35,7 @@ sub checkSra{
   my $SRR = `esearch -db sra -query $SRS | efetch -format xml | xtract -pattern EXPERIMENT_PACKAGE -element $xtractElement`;
   chomp($SRR);
   
-  system("fasterq-dump $SRR --threads 1 --outdir $$settings{tempdir} --split-files --skip-technical");
+  system("fasterq-dump $SRR --threads 1 --outdir $$settings{tempdir} --split-files --skip-technical >&2");
   if($?){
     die "ERROR with fasterq-dump";
   }
