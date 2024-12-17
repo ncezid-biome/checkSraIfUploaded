@@ -106,3 +106,33 @@ zcat spots_found_on_ncbi.txt.gz | shuf | xargs -P 4 -L 1 bash -c '
   perl ../scripts/checkLocalVsNcbiWithMash.pl --R1 $localR1 --R2 $localR2 --SRS $SRS
 ' > checkNcbiWithMash.tsv
 ```
+
+```mermaid
+flowchart TD
+    MD_MISC --> MD
+    MD_MISC --> MD
+    MD_MISC --> MD
+    MD_MISC --> MD
+    MD  --> |efetch any SRA accession for updated metadata| UPDATED_MD
+
+    UPDATED_MD  --> |read the number of spots column| DECISION_MATCH_SPOTS
+    LOCAL_FASTQ --> |read metrics for number of reads| DECISION_MATCH_SPOTS
+    DECISION_MATCH_SPOTS --> |print the local filenames with SRA accession| MATCH_READS_SPOTS
+    DECISION_MATCH_SPOTS --> |print local filenames that do not match| MATCH_READS_NO_SPOTS
+
+    MATCH_READS_SPOTS --> |check if both read counts and mash matches up| MASH_AND_SPOTS_TSV
+    MATCH_READS_SPOTS --> |if the mash score does not match up| MATCH_READS_NO_SPOTS
+
+
+MD_MISC[NCBI Pathogens metadata such as Listeria, Salmonella, etc]
+MD[metadata.tsv.gz]
+
+UPDATED_MD[spots.csv.gz]
+
+LOCAL_FASTQ[local fastq files R1 and R2]
+DECISION_MATCH_SPOTS{Are there any matching spots online compared to the local fastq files?}
+MATCH_READS_SPOTS[spots_found_on_ncbi.tsv.gz]
+MATCH_READS_NO_SPOTS[not_on_ncbi.txt]
+
+MASH_AND_SPOTS_TSV[checkNcbiWithMash.tsv]
+```
