@@ -14,3 +14,5 @@ tmp*
 compare
 SRA_run.txt
 
+fasterq.tmp.*
+

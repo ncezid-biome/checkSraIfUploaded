@@ -10,10 +10,28 @@ local $0=fileparse $0;
 sub logmsg{print STDERR "$0: @_\n";}
 exit main();
 
+sub usage{
+  print "Usage: $0 -SRS SRS -R1 R1 -R2 R2
+  -SRS  SRS accession number
+  -R1   R1 fastq file
+  -R2   R2 fastq file
+  --mashThreshold 0.05  Mash distance threshold
+  --k 32                Mash k-mer size
+  --stackSize 10000     Mash stack size
+  --tempdir /tmp        Temporary directory
+  --verbose             Print out more information
+  \n";
+  exit(0);
+}
+
 sub main{
   my $settings={};
-  GetOptions($settings,qw(help SRS=s R1=s R2=s)) or die $!;
-  die usage() if($$settings{help});
+  if(!@ARGV){
+    logmsg "Run --help for usage";
+    return 0;
+  }
+  GetOptions($settings,qw(help SRS=s R1=s R2=s mashThreshold=f k=i stackSize=i tempdir=s)) or die $!;
+  usage() if($$settings{help});
   
   $$settings{mashThreshold}=0.05;
   $$settings{k}=32;
@@ -84,7 +102,7 @@ sub mashDist{
       return $mashHash;
     }
     my $f=basename($path);
-    system("mash sketch -s $$settings{stackSize} -k $$settings{k} -o $$settings{tempdir}/$f.msh $path");
+    system("mash sketch -s $$settings{stackSize} -k $$settings{k} -o $$settings{tempdir}/$f.msh $path >&2");
     die "ERROR with mash sketch $path" if $?;
   }
   my $output=`mash dist $$settings{tempdir}/*.msh`;

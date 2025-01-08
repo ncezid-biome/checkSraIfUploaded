@@ -1,6 +1,5 @@
 # adapting ../README.md to all
 
-
 ## diagram
 
 ```mermaid
@@ -135,8 +134,10 @@ zcat spots_found_on_ncbi.txt.gz | shuf | xargs -P 4 -L 1 bash -c '
   if [[ $(stat -c%s "$localR1") -lt 1000 || $(stat -c%s "$localR2") -lt 1000 ]]; then
     echo "Error: One or both files are smaller than 1000 bytes." >&2
     ls -lhL $localR1 $localR2 >&2
-    exit 1
+    exit 0
   fi
+
+  echo "$R1 $R2" >&2
 
   perl ../scripts/checkLocalVsNcbiWithMash.pl --R1 $localR1 --R2 $localR2 --SRS $SRS
 ' > checkNcbiWithMash.tsv
